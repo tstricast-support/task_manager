@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
       const { data } = await api.post("/auth/login", form, {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
+      console.log("LOGIN RESPONSE:", data);
 
       const decoded = decodeToken(data.access_token);
       if (!decoded) {
