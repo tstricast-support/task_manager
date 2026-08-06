@@ -56,7 +56,7 @@ if __name__ == "__main__":
     else:
         # Local dev fallback: convenience demo accounts.
         print("[info] ADMIN_EMPLOYEE_ID/ADMIN_PASSWORD not set - seeding local demo accounts")
-        # create_user("ADM001", "Alice Admin", "hr@company.com", "adminpass123", RoleEnum.ADMIN)
-        # create_user("EMP101", "Bob Employee", "hr@company.com", "employeepass123", RoleEnum.EMPLOYEE) 
+        create_user("ADM001", "Alice Admin", "hr@company.com", "adminpass123", RoleEnum.ADMIN)
+        create_user("EMP101", "Bob Employee", "hr@company.com", "employeepass123", RoleEnum.EMPLOYEE) 
 
     db.close()

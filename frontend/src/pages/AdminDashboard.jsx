@@ -13,6 +13,8 @@ export default function AdminDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -46,6 +48,15 @@ export default function AdminDashboard() {
 
   const totalTasks = employees.reduce((sum, e) => sum + e.task_count, 0);
 
+  const filteredEmployees = employees.filter((emp) => {
+  const q = searchQuery.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    emp.employee_id.toLowerCase().includes(q) ||
+    emp.full_name.toLowerCase().includes(q) ||
+    emp.email.toLowerCase().includes(q)
+  );
+});
   return (
     <div className="min-h-screen">
       <Header />
@@ -100,10 +111,20 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        <div className="mb-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by ID, name, or email…"
+            className="w-full rounded-md border border-ink-200 px-3 py-2 text-sm placeholder:text-ink-400 sm:max-w-xs"
+          />
+        </div>
+
         {loading ? (
           <p className="py-10 text-center text-sm text-ink-400">Loading…</p>
         ) : (
-          <EmployeeTable employees={employees} />
+          <EmployeeTable employees={filteredEmployees} hasSearch={searchQuery.trim().length > 0} />
         )}
       </main>
 

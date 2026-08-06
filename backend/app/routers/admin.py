@@ -150,7 +150,7 @@ def create_employee(
     return user
 
 @router.delete("/tasks/{task_id}", status_code=204)
-def delete_any_task(
+async def delete_any_task(          # changed from: def delete_any_task(
     task_id: int,
     admin: models.User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -159,8 +159,19 @@ def delete_any_task(
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    other_ids = {task.assigned_to_id, task.created_by_id} - {admin.id}
+    others = db.query(models.User).filter(models.User.id.in_(other_ids)).all() if other_ids else []
+
     db.delete(task)
     db.commit()
+
+    for user in others:
+        await manager.send_personal_message(
+            user.employee_id,
+            {"type": "TASK_DELETED", "task_id": task_id},
+        )
+
     return None
 
 

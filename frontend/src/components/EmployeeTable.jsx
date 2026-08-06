@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 
-export default function EmployeeTable({ employees }) {
+export default function EmployeeTable({ employees, hasSearch }) {
   const navigate = useNavigate();
 
   if (employees.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-ink-400">
-        No employees found yet.
+        {hasSearch ? "No employees match your search." : "No employees found yet."}
       </p>
     );
   }
