@@ -11,6 +11,15 @@
   }
 }
 
+/* Prevent iOS Safari's auto-zoom-on-focus for any field under 16px */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer utilities {
   .transition-base {
     @apply transition-all duration-150 ease-out;
