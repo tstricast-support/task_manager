@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/img/logo.jpg";
 
 export default function LoginPage() {
   const { login, loading, isAuthenticated, isAdmin } = useAuth();
@@ -31,11 +32,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-ink-50 px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-ink-900 font-display text-base font-bold text-paper">
-            TL
-          </span>
-          <h1 className="font-display text-2xl font-bold">Task Ledger</h1>
-          <p className="mt-1 text-sm text-ink-500">Sign in with your employee ID.</p>
+            <div className="mx-auto mb-4 h-16 w-16 overflow-hidden rounded-full bg-white shadow-lg ring-2 ring-white">
+              <img src={logo} alt="Logo" className="h-full w-full object-cover" />
+            </div>
+            <h1 className="font-display text-2xl font-bold">TRICAST HOLDING</h1>
+            <p className="mt-1 text-sm text-ink-500">Sign in with your employee ID.</p>
         </div>
 
         <form

@@ -12,12 +12,12 @@ export default function TaskRow({ task, index, onToggleStatus, toggling, onDelet
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className={`font-medium leading-snug ${isCompleted ? "text-ink-400 line-through" : "text-ink-900"}`}>
+          <h3 className={`break-words font-medium leading-snug ${isCompleted ? "text-ink-400 line-through" : "text-ink-900"}`}>
             {task.title}
           </h3>
           <StatusPill status={task.status} />
         </div>
-        {task.description && <p className="mt-1 text-sm text-ink-500">{task.description}</p>}
+        {task.description && <p className="mt-1 break-words text-sm text-ink-500">{task.description}</p>}
 
         {(task.start_time || task.end_time) && (
           <p className="mt-1 text-xs font-medium text-secondary-600">

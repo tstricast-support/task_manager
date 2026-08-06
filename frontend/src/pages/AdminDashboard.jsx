@@ -75,7 +75,7 @@ export default function AdminDashboard() {
               {totalTasks} task{totalTasks === 1 ? "" : "s"} in the system
             </p>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(true)}
