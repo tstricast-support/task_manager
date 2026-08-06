@@ -1,9 +1,6 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import datetime
-
+from datetime import datetime, timezone
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
@@ -67,7 +64,7 @@ def update_task_status(
 
     task.status = status_in.status
     if status_in.status == models.TaskStatusEnum.COMPLETED and task.completed_at is None:
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(task)
