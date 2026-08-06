@@ -1,14 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from datetime import datetime
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
 from ..utils.cleanup import delete_expired_tasks
 from typing import List
+from ..websocket_manager import manager
 
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
+
+
+async def _notify_other_party(db: Session, task: models.Task, current_user: models.User, msg: dict):
+    """Send a WS message to whichever of {assignee, creator} isn't the current actor."""
+    other_ids = {task.assigned_to_id, task.created_by_id} - {current_user.id}
+    if not other_ids:
+        return
+    others = db.query(models.User).filter(models.User.id.in_(other_ids)).all()
+    for user in others:
+        await manager.send_personal_message(user.employee_id, msg)
 
 
 @router.get("/me", response_model=List[schemas.TaskOut])
@@ -16,7 +27,6 @@ def get_my_tasks(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return every task assigned to the currently authenticated user."""
     delete_expired_tasks(db)
     return (
         db.query(models.Task)
@@ -33,7 +43,6 @@ def create_own_task(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """An employee (or admin) creates a task assigned to themselves."""
     task = models.Task(
         title=task_in.title,
         description=task_in.description,
@@ -49,13 +58,12 @@ def create_own_task(
 
 
 @router.patch("/{task_id}/status", response_model=schemas.TaskOut)
-def update_task_status(
+async def update_task_status(
     task_id: int,
     status_in: schemas.TaskStatusUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Owner of the task (or an admin) can update its status."""
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -64,26 +72,37 @@ def update_task_status(
 
     task.status = status_in.status
     if status_in.status == models.TaskStatusEnum.COMPLETED and task.completed_at is None:
-        task.completed_at = datetime.now(timezone.utc)
+        task.completed_at = datetime.utcnow()
 
     db.commit()
     db.refresh(task)
+
+    task_payload = schemas.TaskOut.model_validate(task).model_dump()
+    await _notify_other_party(db, task, current_user, {"type": "TASK_UPDATED", "task": task_payload})
+
     return task
 
 
 @router.delete("/{task_id}", status_code=204)
-def delete_own_task(
+async def delete_own_task(          # was: def delete_own_task(
     task_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Owner of the task (or an admin) can delete it."""
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task.assigned_to_id != current_user.id and current_user.role != models.RoleEnum.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized to delete this task")
 
+    task_id_payload = task.id
+    other_ids = {task.assigned_to_id, task.created_by_id} - {current_user.id}
+    others = db.query(models.User).filter(models.User.id.in_(other_ids)).all() if other_ids else []
+
     db.delete(task)
     db.commit()
+
+    for user in others:
+        await manager.send_personal_message(user.employee_id, {"type": "TASK_DELETED", "task_id": task_id_payload})
+
     return None

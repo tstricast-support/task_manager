@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import TaskRow from "../components/TaskRow";
 import AssignTaskModal from "../components/AssignTaskModal";
 import AddKpiNoteModal from "../components/AddKpiNoteModal";
+import { useTaskSocket } from "../context/WebSocketContext";
 
 export default function AdminEmployeeProfile() {
   const { id: employeeId } = useParams();
@@ -17,6 +18,9 @@ export default function AdminEmployeeProfile() {
   const [kpiModalOpen, setKpiModalOpen] = useState(false);
   const [kpiRecords, setKpiRecords] = useState([]);
   const [kpiLoading, setKpiLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
+  const { lastMessage } = useTaskSocket();
+
 
 const now = new Date();
 const [kpiYear] = useState(now.getFullYear());
@@ -84,6 +88,25 @@ useEffect(() => {
     }
   }
 
+  async function handleToggleStatus(task) {
+  const nextStatus = task.status === "COMPLETED" ? "PENDING" : "COMPLETED";
+  setTogglingId(task.id);
+  try {
+    const { data } = await api.patch(`/tasks/${task.id}/status`, { status: nextStatus });
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? data : t)));
+  } catch {
+    setError("Couldn't update that task's status.");
+  } finally {
+    setTogglingId(null);
+  }
+  }
+
+  useEffect(() => {
+  if (lastMessage?.type === "TASK_UPDATED" || lastMessage?.type === "TASK_DELETED") {
+    fetchTasks();
+  }
+  }, [lastMessage, fetchTasks]);
+
   const completedCount = tasks.filter((t) => t.status === "COMPLETED").length;
 
   return (
@@ -148,8 +171,8 @@ useEffect(() => {
                   key={task.id}
                   task={task}
                   index={i}
-                  onToggleStatus={() => {}}
-                  toggling={false}
+                  onToggleStatus={handleToggleStatus}
+                  toggling={togglingId === task.id}
                   onDelete={handleDeleteTask}
                   deleting={deletingId === task.id}
                 />

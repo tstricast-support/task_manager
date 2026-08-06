@@ -34,13 +34,16 @@ export default function EmployeeDashboard() {
 
   // Re-fetch whenever the admin assigns a new task in real time.
   useEffect(() => {
-    if (lastMessage?.type === "TASK_ASSIGNED") {
-      setBanner(`New task assigned: "${lastMessage.task?.title}"`);
-      fetchTasks();
-      const timer = setTimeout(() => setBanner(""), 6000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastMessage, fetchTasks]);
+  if (lastMessage?.type === "TASK_ASSIGNED") {
+    setBanner(`New task assigned: "${lastMessage.task?.title}"`);
+    fetchTasks();
+    const timer = setTimeout(() => setBanner(""), 6000);
+    return () => clearTimeout(timer);
+  }
+  if (lastMessage?.type === "TASK_UPDATED" || lastMessage?.type === "TASK_DELETED") {
+    fetchTasks();
+  }
+}, [lastMessage, fetchTasks]);
 
   async function handleAddTask(payload) {
     setAdding(true);
