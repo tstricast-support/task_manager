@@ -5,8 +5,6 @@ backend/venv/
 *.pyc
 
 # Node
-frontend/node_modules/
-frontend/dist/
 
 # Environment
 .env
