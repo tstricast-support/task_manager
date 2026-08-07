@@ -83,6 +83,11 @@ class KpiNoteCreate(BaseModel):
     outcome: KpiOutcomeEnum        # ON_TIME or LATE (MISSED reserved for no-show tasks)
     note: Optional[str] = None
 
+class KpiNoteUpdate(BaseModel):
+    entry_date: Optional[date_type] = None
+    outcome: Optional[KpiOutcomeEnum] = None
+    note: Optional[str] = None
+
 
 class KpiRecordOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
