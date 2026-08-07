@@ -5,12 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from .database import Base, engine, SessionLocal
 from .utils.cleanup import delete_expired_tasks
-from .database import Base, engine
 from .routers import admin as admin_router
 from .routers import auth as auth_router
 from .routers import tasks as tasks_router
 from .routers import websocket as websocket_router
 from .routers import push as push_router
+from sqlalchemy import text
 
 
 # For production, prefer Alembic migrations over create_all().
@@ -22,6 +22,7 @@ app = FastAPI(
     version="1.0.0",
     description="JWT-secured task management API with real-time WebSocket notifications.",
 )
+
 
 async def _periodic_cleanup():
     """Runs forever in the background, deleting tasks older than 24h
@@ -35,9 +36,25 @@ async def _periodic_cleanup():
         await asyncio.sleep(300)  # every 5 minutes
 
 
+MIGRATION_SQL = """
+DO $$ BEGIN
+    CREATE TYPE departmentenum AS ENUM ('I_LAB', 'IPHOTO_BOOK', 'I_LAB_STD', 'DD_ENGINEERING', 'OTHERS');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS department departmentenum NOT NULL DEFAULT 'OTHERS';
+"""
+
+
 @app.on_event("startup")
-async def start_background_tasks():
+async def on_startup():
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            conn.execute(text(MIGRATION_SQL))
+        print("Migrations applied.")
     asyncio.create_task(_periodic_cleanup())
+
 
 # Comma-separated list of allowed origins, e.g.:
 #   CORS_ORIGINS=https://your-frontend.up.railway.app,https://yourapp.com

@@ -6,6 +6,7 @@ import TaskRow from "../components/TaskRow";
 import AssignTaskModal from "../components/AssignTaskModal";
 import AddKpiNoteModal from "../components/AddKpiNoteModal";
 import { useTaskSocket } from "../context/WebSocketContext";
+import { departmentLabel } from "../constants/departments";
 
 export default function AdminEmployeeProfile() {
   const { id: employeeId } = useParams();
@@ -20,6 +21,9 @@ export default function AdminEmployeeProfile() {
   const [kpiLoading, setKpiLoading] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
   const { lastMessage } = useTaskSocket();
+  const [editingRecord, setEditingRecord] = useState(null);   // holds the record being edited, or null
+  const [deletingKpiId, setDeletingKpiId] = useState(null);
+  const [employee, setEmployee] = useState(null);
 
 
 const now = new Date();
@@ -68,11 +72,44 @@ useEffect(() => {
     setTimeout(() => setSuccessBanner(""), 5000);
   }
 
-  async function handleAddKpiNote(payload) {
-  await api.post(`/admin/employees/${employeeId}/kpi-notes`, payload);
-  setSuccessBanner("KPI note added.");
+  const fetchEmployee = useCallback(async () => {
+  try {
+    const { data } = await api.get(`/admin/employees/${employeeId}`);
+    setEmployee(data);
+  } catch {
+    // non-critical — the page still works without the department badge
+  }
+}, [employeeId]);
+
+useEffect(() => {
+  fetchEmployee();
+}, [fetchEmployee]);
+
+  
+
+async function handleSaveKpiNote(payload) {
+  if (editingRecord) {
+    await api.patch(`/admin/kpi-notes/${editingRecord.id}`, payload);
+    setSuccessBanner("KPI note updated.");
+  } else {
+    await api.post(`/admin/employees/${employeeId}/kpi-notes`, payload);
+    setSuccessBanner("KPI note added.");
+  }
   fetchKpi();
   setTimeout(() => setSuccessBanner(""), 5000);
+}
+
+async function handleDeleteKpiNote(record) {
+  if (!window.confirm("Delete this KPI note? This can't be undone.")) return;
+  setDeletingKpiId(record.id);
+  try {
+    await api.delete(`/admin/kpi-notes/${record.id}`);
+    setKpiRecords((prev) => prev.filter((r) => r.id !== record.id));
+  } catch {
+    setError("Couldn't delete that KPI note.");
+  } finally {
+    setDeletingKpiId(null);
+  }
 }
 
   async function handleDeleteTask(task) {
@@ -121,9 +158,19 @@ useEffect(() => {
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-display text-xs uppercase tracking-widest text-ember-600">
-              Employee profile
+            Employee profile
+           </p>
+            <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
+              {employee ? employee.full_name : employeeId}
+            </h1>
+            <p className="mt-1 text-sm text-ink-500">
+              {employeeId}
+              {employee && (
+                <>
+                  {" "}· <span className="font-medium text-ink-700">{departmentLabel(employee.department)}</span>
+                </>
+              )}
             </p>
-            <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">{employeeId}</h1>
             <p className="mt-1 text-sm text-ink-500">
               {tasks.length} task{tasks.length === 1 ? "" : "s"} · {completedCount} completed
             </p>
@@ -212,7 +259,24 @@ useEffect(() => {
                         year: "numeric",
                       })}
                     </p>
-                    {rec.note && <p className="mt-0.5 text-sm text-ink-500">{rec.note}</p>}
+                    {rec.note && <p className="mt-0.5 break-words text-sm text-ink-500">{rec.note}</p>}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingRecord(rec)}
+                      className="text-xs font-medium text-secondary-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingKpiId === rec.id}
+                      onClick={() => handleDeleteKpiNote(rec)}
+                      className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                    >
+                      {deletingKpiId === rec.id ? "…" : "Delete"}
+                    </button>
                   </div>
                 </li>
               ))}
@@ -228,11 +292,15 @@ useEffect(() => {
         <AssignTaskModal presetEmployeeId={employeeId} onClose={() => setModalOpen(false)} onAssign={handleAssign} />
       )}
 
-      {kpiModalOpen && (
+      {(kpiModalOpen || editingRecord) && (
         <AddKpiNoteModal
           employeeId={employeeId}
-          onClose={() => setKpiModalOpen(false)}
-          onAdd={handleAddKpiNote}
+          initialData={editingRecord}
+          onClose={() => {
+            setKpiModalOpen(false);
+            setEditingRecord(null);
+          }}
+          onSave={handleSaveKpiNote}
         />
       )}
     </div>

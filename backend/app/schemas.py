@@ -3,7 +3,7 @@ from typing import List ,Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from .models import RoleEnum, TaskStatusEnum,KpiOutcomeEnum
+from .models import RoleEnum, TaskStatusEnum,KpiOutcomeEnum, DepartmentEnum   
 
 
 # ---------- Auth ----------
@@ -20,6 +20,8 @@ class UserBase(BaseModel):
     full_name: str
     email: str
     role: RoleEnum
+    department: DepartmentEnum          
+
 
 class EmployeeCreate(BaseModel):
     employee_id: str
@@ -27,6 +29,13 @@ class EmployeeCreate(BaseModel):
     email: str
     password: str
     role: RoleEnum = RoleEnum.EMPLOYEE
+    department: DepartmentEnum = DepartmentEnum.OTHERS
+
+class EmployeeUpdate(BaseModel):        
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[RoleEnum] = None
+    department: Optional[DepartmentEnum] = None
 
 
 class UserOut(UserBase):

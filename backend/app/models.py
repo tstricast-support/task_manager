@@ -16,18 +16,24 @@ class TaskStatusEnum(str, enum.Enum):
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
 
+class DepartmentEnum(str, enum.Enum):
+    I_LAB = "I_LAB"
+    IPHOTO_BOOK = "IPHOTO_BOOK"
+    I_LAB_STD = "I_LAB_STD"
+    DD_ENGINEERING = "DD_ENGINEERING"
+    OTHERS = "OTHERS"
+
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    # Login identifier, e.g. "EMP101". Unique, unlike email.
     employee_id = Column(String(20), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(120), nullable=False)
-    # Intentionally NOT unique: multiple employees can share one inbox/email.
     email = Column(String(120), index=True, nullable=False)
     role = Column(Enum(RoleEnum), default=RoleEnum.EMPLOYEE, nullable=False)
+    department = Column(Enum(DepartmentEnum), default=DepartmentEnum.OTHERS, nullable=False)
 
     assigned_tasks = relationship(
         "Task",

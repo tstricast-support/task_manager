@@ -1,9 +1,12 @@
 import { useState } from "react";
 
-export default function AddKpiNoteModal({ employeeId, onClose, onAdd }) {
-  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [outcome, setOutcome] = useState("ON_TIME");
-  const [note, setNote] = useState("");
+export default function AddKpiNoteModal({ employeeId, initialData, onClose, onSave }) {
+  const isEditing = Boolean(initialData);
+  const [entryDate, setEntryDate] = useState(
+    initialData?.entry_date || new Date().toISOString().slice(0, 10)
+  );
+  const [outcome, setOutcome] = useState(initialData?.outcome || "ON_TIME");
+  const [note, setNote] = useState(initialData?.note || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -12,10 +15,10 @@ export default function AddKpiNoteModal({ employeeId, onClose, onAdd }) {
     setSubmitting(true);
     setError("");
     try {
-      await onAdd({ entry_date: entryDate, outcome, note: note.trim() || null });
+      await onSave({ entry_date: entryDate, outcome, note: note.trim() || null });
       onClose();
     } catch (err) {
-      setError(err.response?.data?.detail || "Couldn't add that note.");
+      setError(err.response?.data?.detail || "Couldn't save that note.");
     } finally {
       setSubmitting(false);
     }
@@ -25,7 +28,7 @@ export default function AddKpiNoteModal({ employeeId, onClose, onAdd }) {
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink-950/40 px-4" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-xl border border-ink-100 bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between">
-          <h2 className="font-display text-lg font-semibold">Add KPI note</h2>
+          <h2 className="font-display text-lg font-semibold">{isEditing ? "Edit KPI note" : "Add KPI note"}</h2>
           <button type="button" onClick={onClose} className="text-ink-400 hover:text-ink-900" aria-label="Close">✕</button>
         </div>
 
@@ -72,7 +75,7 @@ export default function AddKpiNoteModal({ employeeId, onClose, onAdd }) {
               disabled={submitting}
               className="transition-base rounded-md bg-secondary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-secondary-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "Saving…" : "Save note"}
+              {submitting ? "Saving…" : isEditing ? "Save changes" : "Save note"}
             </button>
           </div>
         </form>

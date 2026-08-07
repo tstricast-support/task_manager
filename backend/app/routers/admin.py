@@ -37,6 +37,18 @@ def list_employees(
         result.append(schemas.EmployeeWithTaskCount(**payload))
     return result
 
+@router.get("/employees/{employee_id}", response_model=schemas.UserOut)
+def get_employee(
+    employee_id: str,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Fetch one employee's profile details (used by the employee profile page)."""
+    employee = db.query(models.User).filter(models.User.employee_id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return employee
+
 
 @router.get("/employees/{employee_id}/tasks", response_model=List[schemas.TaskOut])
 def get_employee_tasks(
@@ -143,11 +155,60 @@ def create_employee(
         email=employee_in.email,
         password_hash=auth_utils.get_password_hash(employee_in.password),
         role=employee_in.role,
+        department=employee_in.department,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
+@router.patch("/employees/{employee_id}", response_model=schemas.UserOut)
+def edit_employee(
+    employee_id: str,
+    update_in: schemas.EmployeeUpdate,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin edits an employee's name, email, role, or department."""
+    employee = db.query(models.User).filter(models.User.employee_id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    if update_in.full_name is not None:
+        employee.full_name = update_in.full_name
+    if update_in.email is not None:
+        employee.email = update_in.email
+    if update_in.role is not None:
+        employee.role = update_in.role
+    if update_in.department is not None:
+        employee.department = update_in.department
+
+    db.commit()
+    db.refresh(employee)
+    return employee
+
+
+@router.post("/employees/{employee_id}/offboard", response_model=schemas.UserOut)
+def offboard_employee(
+    employee_id: str,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    'Delete' an employee without losing history: moves them into the Others
+    department instead of removing the row, so their past tasks and KPI
+    notes stay intact for later review.
+    """
+    employee = db.query(models.User).filter(models.User.employee_id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    if employee.id == admin.id:
+        raise HTTPException(status_code=400, detail="You can't offboard your own account")
+
+    employee.department = models.DepartmentEnum.OTHERS
+    db.commit()
+    db.refresh(employee)
+    return employee
 
 @router.delete("/tasks/{task_id}", status_code=204)
 async def delete_any_task(          # changed from: def delete_any_task(
@@ -199,6 +260,45 @@ def add_kpi_note(
     db.commit()
     db.refresh(record)
     return record
+
+@router.patch("/kpi-notes/{record_id}", response_model=schemas.KpiRecordOut)
+def edit_kpi_note(
+    record_id: int,
+    note_in: schemas.KpiNoteUpdate,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin edits an existing KPI note."""
+    record = db.query(models.KpiRecord).filter(models.KpiRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="KPI note not found")
+
+    if note_in.entry_date is not None:
+        record.entry_date = note_in.entry_date
+    if note_in.outcome is not None:
+        record.outcome = note_in.outcome
+    if note_in.note is not None:
+        record.note = note_in.note
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@router.delete("/kpi-notes/{record_id}", status_code=204)
+def delete_kpi_note(
+    record_id: int,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin deletes a KPI note."""
+    record = db.query(models.KpiRecord).filter(models.KpiRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="KPI note not found")
+
+    db.delete(record)
+    db.commit()
+    return None
 
 
 @router.get("/employees/{employee_id}/kpi-monthly", response_model=schemas.EmployeeMonthlyKpi)
